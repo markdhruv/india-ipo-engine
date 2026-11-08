@@ -561,3 +561,8 @@ recommendation to apply for any issue.
 - Scraped sources can change markup without notice. The engine logs a warning
   and degrades rather than guessing — check `confidence` and the dashboard
   before acting on any row.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). Informational software only, provided without
+warranty; it is not investment advice.
