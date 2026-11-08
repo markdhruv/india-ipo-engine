@@ -76,6 +76,12 @@ class IPO:
     # Filled in from realised outcomes of similar past issues. This, not
     # expected_gain_pct, is the headline: the point estimate carries an error
     # larger than the median outcome it is estimating.
+    # Whether retail allotment is a draw for one lot (applicants outnumber
+    # lots) or proportionate, where one application can win several. The
+    # "bid one lot only" rule holds in the first case and not the second.
+    retail_lottery: bool | None = None
+    expected_retail_lots: float | None = None
+
     clear_probability: float | None = None
     probability_sample: int | None = None
     outcome_median: float | None = None

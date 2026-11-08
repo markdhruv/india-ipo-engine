@@ -10,13 +10,25 @@ Two inputs decide everything:
             six PANs beats Rs 5 lakh on one, because allotment is a draw per
             application rather than per rupee.
 
-The one rule that matters
--------------------------
-**Never bid more than one lot.** When a retail category is oversubscribed,
-SEBI allots the minimum lot by draw of lots, so bidding five lots gives
-exactly the same chance as bidding one while blocking five times the capital.
-Every application this planner produces is therefore one lot, and the way to
-use more money is more PANs and more issues - never a bigger bid.
+The one-lot rule, and where it stops applying
+---------------------------------------------
+**While applicants outnumber the lots on offer, never bid more than one.**
+SEBI then allots the minimum lot by draw, so bidding five gives exactly the
+same chance as bidding one while blocking five times the capital. More money
+belongs in more PANs and more issues, not a bigger bid.
+
+That condition is not the same as "oversubscribed", which is how an earlier
+version of this file put it. Once there are enough lots for every applicant
+to receive their minimum, the surplus is distributed proportionately and a
+single application can win several lots - so bidding more does help there.
+Measured on live books that needs retail subscription down around 1-2x,
+because applicants bid two or three lots each on average: an issue 2.3x
+subscribed still had fewer lots than applicants.
+
+The planner still bids one lot per application, because the issues where
+bidding more pays are weakly subscribed ones the model scores near zero
+anyway. ``scoring.is_lottery`` reports which regime an issue is in, and the
+app states the rule conditionally rather than as a universal law.
 
 A PAN may apply to several different issues at once, but only once per issue
 (the registrar rejects duplicates on a PAN). So ``pans`` caps applications

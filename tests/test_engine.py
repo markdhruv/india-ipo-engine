@@ -108,6 +108,70 @@ class TestAllotmentMath(unittest.TestCase):
         self.assertEqual(allotment_probability(ipo, "RETAIL"), 1.0)
 
 
+class TestAllotmentRegime(unittest.TestCase):
+    """One lot or several, depending on whether applicants outnumber lots.
+
+    "Oversubscribed" is not the condition. An issue can be oversubscribed
+    and still have more lots than applicants, because applicants bid two or
+    three lots each - a live book 2.3x subscribed had 0.885 lots per
+    applicant, still a draw.
+    """
+
+    @staticmethod
+    def _issue(offered, applications, lot=100, price=100.0, times=None):
+        from ipo_engine.scoring import expected_lots, is_lottery, lots_per_applicant
+        ipo = make_ipo(lot_size=lot, price=price)
+        ipo.bids["RETAIL"] = CategoryBid("RETAIL", shares_offered=offered,
+                                         applications=applications, times=times)
+        return ipo, lots_per_applicant, is_lottery, expected_lots
+
+    def test_more_applicants_than_lots_is_a_draw(self):
+        ipo, ratio, lottery, lots = self._issue(offered=100_000, applications=5_000)
+        self.assertAlmostEqual(ratio(ipo, "RETAIL"), 0.2)     # 1000 lots / 5000
+        self.assertTrue(lottery(ipo))
+        self.assertAlmostEqual(lots(ipo, "RETAIL"), 0.2)
+
+    def test_more_lots_than_applicants_is_proportionate(self):
+        ipo, ratio, lottery, lots = self._issue(offered=100_000, applications=200)
+        self.assertAlmostEqual(ratio(ipo, "RETAIL"), 5.0)      # 1000 lots / 200
+        self.assertFalse(lottery(ipo))
+        # A one-lot bid still only wins one lot...
+        self.assertAlmostEqual(lots(ipo, "RETAIL", bid_lots=1), 1.0)
+        # ...but bidding more does help here, unlike in a draw.
+        self.assertAlmostEqual(lots(ipo, "RETAIL", bid_lots=10), 5.0)
+
+    def test_bidding_more_never_helps_in_a_draw(self):
+        ipo, _ratio, _lottery, lots = self._issue(offered=100_000, applications=5_000)
+        self.assertEqual(lots(ipo, "RETAIL", bid_lots=1),
+                         lots(ipo, "RETAIL", bid_lots=10))
+
+    def test_mild_oversubscription_can_still_be_a_draw(self):
+        """The live counter-example: 2.3x subscribed, 0.885 lots per applicant."""
+        ipo, ratio, lottery, _lots = self._issue(
+            offered=3_392_920, applications=3_195, lot=1_200, times=2.3)
+        self.assertAlmostEqual(ratio(ipo, "RETAIL"), 0.885, places=3)
+        self.assertTrue(lottery(ipo))
+
+    def test_value_uses_expected_lots_not_just_the_odds(self):
+        """Above one lot per applicant, counting a single lot understates."""
+        ipo = make_ipo(lot_size=100, price=100.0, gmp_pct=15.0)
+        ipo.bids["TOTAL"] = CategoryBid("TOTAL", times=1.4)
+        ipo.bids["RETAIL"] = CategoryBid("RETAIL", shares_offered=100_000,
+                                         applications=200, times=1.4)
+        score(ipo, CFG)
+        self.assertFalse(ipo.retail_lottery)
+        self.assertAlmostEqual(ipo.expected_retail_lots, 1.0)
+        self.assertAlmostEqual(
+            ipo.expected_value_inr,
+            1.0 * ipo.capital_per_application * ipo.expected_gain_pct / 100.0)
+
+    def test_regime_unknown_without_application_counts(self):
+        from ipo_engine.scoring import is_lottery
+        ipo = make_ipo()
+        ipo.bids["RETAIL"] = CategoryBid("RETAIL", times=20.0)
+        self.assertIsNone(is_lottery(ipo))
+
+
 class TestExpectedGain(unittest.TestCase):
     def test_gmp_is_shrunk_not_taken_at_face_value(self):
         ipo = make_ipo(gmp_pct=20.0)

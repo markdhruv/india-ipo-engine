@@ -325,6 +325,54 @@ def min_application_shares(ipo: IPO, category: str) -> int | None:
     return lot * max(1, math.ceil(threshold / lot_value))
 
 
+def lots_per_applicant(ipo: IPO, category: str) -> float | None:
+    """Lots available divided by applications received.
+
+    This single ratio describes both allotment regimes, which is why it is
+    computed once and used for everything:
+
+      below 1  more applicants than lots, so SEBI allots the minimum lot by
+               draw. You receive one lot or nothing, and the ratio is your
+               probability of the former.
+      above 1  enough lots to give every applicant their minimum, with the
+               surplus distributed proportionately. You receive roughly this
+               many lots, and bidding for more than one is worth doing.
+
+    Either way it is the *expected* number of lots per minimum application,
+    which is what the value calculation needs.
+    """
+    bid = ipo.bids.get(category)
+    if bid is None or not bid.applications or bid.applications <= 0:
+        return None
+    min_app = min_application_shares(ipo, category)
+    if not bid.shares_offered or not min_app:
+        return None
+    return (bid.shares_offered / min_app) / bid.applications
+
+
+def is_lottery(ipo: IPO, category: str = "RETAIL") -> bool | None:
+    """True when applicants outnumber lots, so only one lot can be won."""
+    ratio = lots_per_applicant(ipo, category)
+    return None if ratio is None else ratio < 1.0
+
+
+def expected_lots(ipo: IPO, category: str = "RETAIL",
+                  bid_lots: int = 1) -> float | None:
+    """Lots a single application can expect, given how many it bids for.
+
+    Capped by the bid: asking for one lot cannot win two. In the lottery
+    regime the cap never binds, which is why one lot is the right bid
+    there - and why it is the wrong advice when the ratio exceeds one.
+    """
+    ratio = lots_per_applicant(ipo, category)
+    if ratio is None:
+        sub = ipo.sub(category)
+        if sub is None or sub <= 0:
+            return None
+        return min(float(bid_lots), 1.0 / sub) if sub > 1 else float(bid_lots)
+    return min(float(bid_lots), ratio)
+
+
 def allotment_probability(ipo: IPO, category: str) -> float | None:
     """Odds that one minimum-size application receives an allotment.
 
@@ -428,10 +476,17 @@ def score(ipo: IPO, cfg: dict) -> IPO:
             ipo.allotment_prob[category] = probability
 
     ipo.capital_per_application = capital_per_application(ipo, "RETAIL")
-    retail_odds = ipo.allotment_prob.get("RETAIL")
-    if (gain is not None and ipo.capital_per_application and retail_odds is not None):
-        gain_if_allotted = ipo.capital_per_application * gain / 100.0
-        ipo.expected_value_inr = retail_odds * gain_if_allotted
+    ipo.retail_lottery = is_lottery(ipo, "RETAIL")
+    ipo.expected_retail_lots = expected_lots(ipo, "RETAIL", bid_lots=1)
+
+    # Value the *lots* expected, not the probability of exactly one. The two
+    # agree in the lottery regime; above it a single application can win
+    # several lots and probability alone understates the outcome.
+    if gain is not None and ipo.capital_per_application:
+        lots = ipo.expected_retail_lots
+        if lots is not None:
+            ipo.expected_value_inr = (lots * ipo.capital_per_application
+                                      * gain / 100.0)
 
     ipo.verdict = _verdict(ipo, cfg)
     return ipo

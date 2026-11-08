@@ -95,9 +95,8 @@ tbody tr.open{background:var(--posbg)}
     <div><label>PANs you can fund</label>
       <input type="number" id="pans" value="6" min="1" max="20" step="1"></div>
   </div>
-  <div class="meta" style="margin-top:10px">
-    Changing these is instant — no refetch. One lot per PAN: extra lots do not
-    improve allotment odds.
+  <div class="meta" style="margin-top:10px" id="lotnote">
+    Changing these is instant — no refetch.
   </div>
 </div></div>
 
@@ -138,9 +137,15 @@ function odds(i){
   return `<span class="${cls}" style="font-weight:650">${p.toFixed(0)}%</span>${spread}`;
 }
 
-function allot(v){
+function allot(i){
+  const v = i.allotment;
   if (v == null) return '<span class="thin">—</span>';
-  return `${(v*100).toFixed(2)}%<div class="bar"><i style="width:${Math.max(1.5,Math.min(100,v*100))}%"></i></div>`;
+  const bar = `<div class="bar"><i style="width:${Math.max(1.5,Math.min(100,v*100))}%"></i></div>`;
+  // Above one lot per applicant, allotment is proportionate rather than a
+  // draw, so a single application can win several lots.
+  const lots = (i.lottery === false && i.expected_lots != null)
+    ? `<div class="meta">~${i.expected_lots.toFixed(1)} lots — proportionate, not a draw</div>` : '';
+  return `${(v*100).toFixed(2)}%${bar}${lots}`;
 }
 
 function render(d){
@@ -193,8 +198,14 @@ function render(d){
     <td><span class="pill ${(i.band||'UNKNOWN').replace(/\s/g,'')}">${i.band||'UNKNOWN'}</span></td>
     <td>${odds(i)}</td><td>${pct(i.expected_gain)}</td><td>${pct(i.gmp_pct)}</td>
     <td>${sub(i.total_sub)}</td><td>${sub(i.qib_sub)}</td>
-    <td class="thin">${i.weakest||'—'}</td><td>${allot(i.allotment)}</td>
+    <td class="thin">${i.weakest||'—'}</td><td>${allot(i)}</td>
     <td>${inr(i.lot_value)}</td><td>${i.ev==null?'—':inr(i.ev)}</td></tr>`).join("");
+  const anyProp = d.issues.some(i => i.lottery === false);
+  $("lotnote").innerHTML = "Changing these is instant — no refetch. "
+    + (anyProp
+       ? "One lot per PAN for issues allotted by draw. Where allotment is <b>proportionate</b> (marked in the table) a single application can win several lots, and bidding more does help."
+       : "One lot per PAN: every issue here is allotted by draw, so extra lots do not improve your odds.");
+
   $("issues").innerHTML = d.issues.length ? `<table><thead><tr>
     <th>Issue</th><th>Odds</th><th>Chance of goal</th><th>Est. listing</th><th>GMP</th>
     <th>Total sub</th><th>QIB</th><th>Weakest leg</th><th>Allotment odds</th>

@@ -133,6 +133,8 @@ def _issue_json(ipo) -> dict:
                     if ipo.weakest_category and ipo.weakest_category_sub is not None
                     else None),
         "allotment": ipo.allotment_prob.get("RETAIL"),
+        "lottery": ipo.retail_lottery,
+        "expected_lots": ipo.expected_retail_lots,
         "lot_value": ipo.capital_per_application,
         "ev": ipo.expected_value_inr,
         "confidence_score": ipo.confidence,

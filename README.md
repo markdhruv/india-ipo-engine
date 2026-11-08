@@ -283,14 +283,36 @@ Two inputs decide everything (`config.json` → `capital`, overridable per run):
 applications to issue i = min( pans , floor(capital_remaining / lot_value_i) )
 ```
 
-#### Never bid more than one lot
+#### One lot — while applicants outnumber lots
 
-When a retail category is oversubscribed, SEBI allots the **minimum lot by a
-draw of lots**. Bidding five lots gives exactly the same chance as bidding
-one, while blocking five times the capital. Every application the planner
-produces is one lot; the way to use more money is more PANs and more issues,
-never a bigger bid. A PAN may apply to many different issues but only once
-per issue, so `pans` caps applications *per issue*, not in total.
+When there are more applicants than lots on offer, SEBI allots the **minimum
+lot by a draw**. Bidding five lots gives exactly the same chance as bidding
+one, while blocking five times the capital. More money belongs in more PANs
+and more issues, not a bigger bid. A PAN may apply to many different issues
+but only once per issue, so `pans` caps applications *per issue*.
+
+**That condition is not "oversubscribed".** Once there are enough lots for
+every applicant to receive their minimum, the surplus is distributed
+proportionately and one application can win several lots — so bidding more
+does help there. The engine reports which regime applies rather than
+repeating the rule as a law:
+
+```
+lots per applicant = (shares offered / lot size) / applications received
+
+  below 1   draw — you win one lot or none, and this is the probability
+  above 1   proportionate — this is roughly how many lots you receive
+```
+
+One ratio covers both, and it is the *expected lots* per application, which
+is what the value calculation uses. Counting a single lot would understate
+the proportionate case.
+
+In practice the threshold sits around 1–2x retail subscription, because
+applicants bid two or three lots each: a live book **2.3x subscribed still
+had only 0.885 lots per applicant** — still a draw. The planner therefore
+stays at one lot, since the issues where bidding more pays are weakly
+subscribed ones the model scores near zero anyway.
 
 #### What that does to the odds
 
@@ -532,7 +554,7 @@ defaults, and `confidence` is the honest guide to each row.
 .venv\Scripts\python -m unittest discover -s tests -v
 ```
 
-132 tests covering the parsing traps, calendar guards, allotment maths, GMP
+140 tests covering the parsing traps, calendar guards, allotment maths, GMP
 shrink behaviour, per-segment subscription composition, the coherence guard,
 stable IPO identity across sources, budget/PAN allocation, the
 Poisson-binomial outcome spread, listing-outcome capture, regime reading,
