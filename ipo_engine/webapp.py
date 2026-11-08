@@ -80,6 +80,12 @@ class State:
             history = len(predictor.history)
 
         plan = build_plan(self.ipos, cfg, budget=capital, pans=pans)
+        # With nothing open the plan is empty however the settings are set,
+        # which makes the controls look dead. Fall back to a clearly-labelled
+        # preview against the most recent closed issues.
+        if not plan.applications and not any(i.is_open for i in self.ipos):
+            plan = build_plan(self.ipos, cfg, budget=capital, pans=pans,
+                              allow_closed=True)
 
         return {
             "fetched_at": self.fetched_at,
@@ -136,6 +142,7 @@ def _issue_json(ipo) -> dict:
 
 def _plan_json(plan) -> dict:
     return {
+        "preview": plan.preview,
         "budget": plan.budget,
         "pans": plan.pans,
         "deployed": plan.deployed,

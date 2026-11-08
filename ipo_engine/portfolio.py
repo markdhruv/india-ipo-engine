@@ -76,6 +76,11 @@ class Plan:
     applications: list[Application] = field(default_factory=list)
     skipped: list[Skipped] = field(default_factory=list)
     distribution: list[float] = field(default_factory=list)
+    # True when built against closed issues because nothing is open. Indian
+    # IPOs arrive in bursts, so an empty plan is the normal state most days -
+    # and an empty panel makes the settings look broken. A preview shows what
+    # they would do against the last batch. Never actionable.
+    preview: bool = False
 
     @property
     def deployed(self) -> float:
@@ -139,12 +144,13 @@ def allotment_distribution(odds: list[float]) -> list[float]:
     return dp
 
 
-def _candidate(ipo: IPO, cfg: dict, budget: float) -> tuple[float, float, str | None]:
+def _candidate(ipo: IPO, cfg: dict, budget: float,
+               allow_closed: bool = False) -> tuple[float, float, str | None]:
     """(lot value, retail odds, skip reason) for one issue."""
     gate = cfg["triggers"]["min_expected_listing_gain_pct"]
     min_confidence = cfg["triggers"].get("min_confidence", 0.60)
 
-    if not ipo.is_open:
+    if not ipo.is_open and not allow_closed:
         return 0.0, 0.0, NOT_OPEN
 
     # Eligibility is the confidence test where odds exist: a point estimate
@@ -171,7 +177,7 @@ def _candidate(ipo: IPO, cfg: dict, budget: float) -> tuple[float, float, str | 
 
 
 def build_plan(ipos: list[IPO], cfg: dict, *, budget: float | None = None,
-               pans: int | None = None) -> Plan:
+               pans: int | None = None, allow_closed: bool = False) -> Plan:
     """Greedy allocation of a budget across the issues that clear the bar.
 
     Ranked by expected return per rupee blocked, which is the only sane
@@ -187,9 +193,11 @@ def build_plan(ipos: list[IPO], cfg: dict, *, budget: float | None = None,
 
     plan = Plan(budget=budget, pans=pans)
 
+    plan.preview = allow_closed
+
     ranked: list[tuple[float, IPO, float, float]] = []
     for ipo in ipos:
-        lot_value, odds, reason = _candidate(ipo, cfg, budget)
+        lot_value, odds, reason = _candidate(ipo, cfg, budget, allow_closed)
         if reason:
             plan.skipped.append(Skipped(ipo, reason))
             continue

@@ -69,6 +69,8 @@ tbody tr.open{background:var(--posbg)}
 .note{background:var(--warnbg);border-left:3px solid var(--warn);border-radius:8px;
  padding:12px 14px;font-size:12.5px;line-height:1.55}
 .empty{padding:24px;text-align:center;color:var(--muted);font-size:13.5px}
+.preview{margin:14px 16px 0;padding:10px 13px;border-radius:8px;font-size:12.5px;
+ line-height:1.5;background:var(--warnbg);border-left:3px solid var(--warn)}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 @media (max-width:640px){body{padding:14px 10px 40px}.card .n{font-size:19px}}
 </style></head><body><div class="wrap">
@@ -157,13 +159,18 @@ function render(d){
     : '<div class="empty">No listing history yet.</div>';
 
   const p = d.plan;
+  const banner = p.preview
+    ? `<div class="preview">No IPO is open today — Indian IPOs arrive in bursts.
+       This is a <b>preview</b> of what your settings would do against the last
+       batch of closed issues, so you can see them working. Not actionable.</div>`
+    : "";
   const rows = p.rows.map(a => `<tr><td><div class="name">${esc(a.name)}</div></td>
     <td>${a.pans}</td><td>${inr(a.lot)}</td><td>${inr(a.capital)}</td>
     <td>${(a.odds*100).toFixed(2)}%</td><td>${pct(a.gain)}</td><td>${inr(a.ev)}</td></tr>`).join("");
   const skipped = p.skipped.length
     ? `<div class="meta" style="padding:0 16px 12px">Out of reach on this budget: ` +
       p.skipped.map(s => `${esc(s.name)} (${inr(s.lot)})`).join("; ") + `</div>` : "";
-  $("plan").innerHTML = p.rows.length ? `<div class="scroll"><table>
+  $("plan").innerHTML = p.rows.length ? `${banner}<div class="scroll"><table>
     <thead><tr><th>Issue</th><th>PANs</th><th>1 lot</th><th>Capital</th>
     <th>Allotment odds</th><th>Est. gain</th><th>E[value]</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
@@ -174,7 +181,8 @@ function render(d){
       <div class="card"><div class="n">${inr(p.expected_inr)}</div><div class="l">Expected value</div></div>
       <div class="card"><div class="n">${p.applications}</div><div class="l">Applications</div></div>
     </div><div class="meta" style="margin-top:10px">Deploys ${inr(p.deployed)}, leaves ${inr(p.idle)} idle.</div></div>${skipped}`
-    : `<div class="empty">Nothing open clears your settings right now.</div>${skipped}`;
+    : `${banner}<div class="empty">Nothing clears your settings at this goal and confidence.<br>
+       <span class="meta">Try lowering the goal or the confidence to see what would qualify.</span></div>${skipped}`;
 
   const body = d.issues.map(i => `<tr class="${i.open?'open':''}">
     <td><div class="name">${esc(i.name)}</div><div class="meta">${esc(i.exchange||i.segment)}${i.close_date?' · closes '+i.close_date:''}${i.open?' · OPEN':''}</div></td>
