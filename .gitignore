@@ -1,0 +1,11 @@
+# Virtual environment - recreated by start.sh / start.bat on first run
+.venv/
+__pycache__/
+*.pyc
+
+# Generated output
+data/dashboard.html
+
+# NOTE: data/ipo_engine.db is deliberately COMMITTED. It carries ~190 realised
+# listing outcomes, and the probability model needs 50+ of them to quote odds
+# at all. Without it a fresh clone falls back to point estimates.

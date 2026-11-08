@@ -1,0 +1,14 @@
+# Normalise text in the repo, but pin line endings where they matter.
+* text=auto
+
+# Shell scripts must stay LF. With CRLF the shebang reads as
+# "/usr/bin/env bash\r" and macOS/Linux refuse to run start.sh at all.
+*.sh text eol=lf
+
+# Windows scripts need CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# The outcomes database is binary. Any line-ending conversion corrupts it,
+# and it carries the ~190 realised listings the odds model depends on.
+*.db binary
