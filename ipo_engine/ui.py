@@ -165,7 +165,8 @@ function render(d){
        batch of closed issues, so you can see them working. Not actionable.</div>`
     : "";
   const rows = p.rows.map(a => `<tr><td><div class="name">${esc(a.name)}</div></td>
-    <td>${a.pans}</td><td>${inr(a.lot)}</td><td>${inr(a.capital)}</td>
+    <td>${a.pans}<div class="meta ${a.limited_by==='capital'?'warn':''}">${esc(a.limit_note)}</div></td>
+    <td>${inr(a.lot)}</td><td>${inr(a.capital)}</td>
     <td>${(a.odds*100).toFixed(2)}%</td><td>${pct(a.gain)}</td><td>${inr(a.ev)}</td></tr>`).join("");
   const skipped = p.skipped.length
     ? `<div class="meta" style="padding:0 16px 12px">Out of reach on this budget: ` +
@@ -180,7 +181,10 @@ function render(d){
       <div class="card"><div class="n">${p.expected_allotments.toFixed(2)}</div><div class="l">Expected allotments</div></div>
       <div class="card"><div class="n">${inr(p.expected_inr)}</div><div class="l">Expected value</div></div>
       <div class="card"><div class="n">${p.applications}</div><div class="l">Applications</div></div>
-    </div><div class="meta" style="margin-top:10px">Deploys ${inr(p.deployed)}, leaves ${inr(p.idle)} idle.</div></div>${skipped}`
+    </div><div class="meta" style="margin-top:10px">Deploys ${inr(p.deployed)}, leaves ${inr(p.idle)} idle.
+      ${p.rows.some(a => a.limited_by === 'capital')
+        ? '<b>Capital is the limit here, not PANs</b> — adding PANs changes nothing until the budget covers another lot.'
+        : 'Your PANs are the limit — more capital changes nothing until another issue opens.'}</div></div>${skipped}`
     : `${banner}<div class="empty">Nothing clears your settings at this goal and confidence.<br>
        <span class="meta">Try lowering the goal or the confidence to see what would qualify.</span></div>${skipped}`;
 

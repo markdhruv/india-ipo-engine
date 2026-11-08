@@ -45,6 +45,18 @@ class Application:
     lot_value: float
     odds: float
     gain_pct: float
+    # Which limit decided the count. Without this, "4 PANs" next to "2
+    # applications" reads as a bug rather than as an SME lot costing more
+    # than a quarter of the budget.
+    limited_by: str = "pans"
+    pans_available: int = 0
+
+    @property
+    def limit_note(self) -> str:
+        if self.limited_by == "capital":
+            return (f"{self.pans} of {self.pans_available} PANs - budget covers "
+                    f"{self.pans} lot{'s' if self.pans != 1 else ''} at this price")
+        return f"all {self.pans} PANs"
 
     @property
     def capital(self) -> float:
@@ -214,7 +226,9 @@ def build_plan(ipos: list[IPO], cfg: dict, *, budget: float | None = None,
             continue
         plan.applications.append(Application(
             ipo=ipo, pans=count, lot_value=lot_value,
-            odds=odds, gain_pct=ipo.expected_gain_pct))
+            odds=odds, gain_pct=ipo.expected_gain_pct,
+            limited_by="capital" if affordable < pans else "pans",
+            pans_available=pans))
         remaining -= count * lot_value
 
     odds_list: list[float] = []

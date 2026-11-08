@@ -156,7 +156,8 @@ def _plan_json(plan) -> dict:
         "distribution": plan.distribution[:6],
         "rows": [{"name": a.ipo.name, "pans": a.pans, "lot": a.lot_value,
                   "capital": a.capital, "odds": a.odds, "gain": a.gain_pct,
-                  "ev": a.expected_inr} for a in plan.applications],
+                  "ev": a.expected_inr, "limited_by": a.limited_by,
+                  "limit_note": a.limit_note} for a in plan.applications],
         "skipped": [{"name": s.ipo.name, "reason": s.reason,
                      "lot": s.ipo.capital_per_application}
                     for s in plan.skipped_tail()],

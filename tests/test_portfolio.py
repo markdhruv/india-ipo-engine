@@ -67,6 +67,28 @@ class TestAllocation(unittest.TestCase):
         plan = build_plan([ipo], CFG, budget=1_000_000, pans=1)
         self.assertEqual(plan.application_count, 1)
 
+    def test_reports_capital_as_the_binding_limit(self):
+        """4 PANs next to 2 applications reads as a bug without this.
+
+        An SME lot at Rs 1.44 L against a Rs 3 L budget buys two, however
+        many PANs are available.
+        """
+        sme = open_ipo("Big SME", lot_value=144_000, odds=0.0085, gain=21.9,
+                       segment="SME")
+        plan = build_plan([sme], CFG, budget=300_000, pans=4)
+        application = plan.applications[0]
+        self.assertEqual(application.pans, 2)
+        self.assertEqual(application.limited_by, "capital")
+        self.assertEqual(application.pans_available, 4)
+        self.assertIn("2 of 4 PANs", application.limit_note)
+
+    def test_reports_pans_as_the_binding_limit(self):
+        cheap = open_ipo("Cheap Ltd", lot_value=15_000, odds=0.05, gain=20.0)
+        plan = build_plan([cheap], CFG, budget=1_000_000, pans=3)
+        application = plan.applications[0]
+        self.assertEqual(application.limited_by, "pans")
+        self.assertIn("all 3 PANs", application.limit_note)
+
     def test_budget_caps_applications(self):
         ipo = open_ipo("Cheap Ltd", lot_value=15_000, odds=0.05, gain=20.0)
         plan = build_plan([ipo], CFG, budget=40_000, pans=6)
